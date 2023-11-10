@@ -1,13 +1,14 @@
-from math import sin, cos, atan, sqrt
-import matplotlib.pyplot as plt
-import numpy as np
-
-
 """
+Groupe 11.14 LEPL 1501-APP1
+Programme de simulation de la barge flottante
 TODO :
 Calculer les valeurs de hl et hr
 G_0
 """
+
+from math import sin, cos, atan, sqrt
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 # Rotation point
