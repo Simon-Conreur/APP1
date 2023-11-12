@@ -3,7 +3,11 @@ Groupe 11.14 LEPL 1501-APP1
 Programme de simulation de la barge flottante
 TODO :
 Calculer les valeurs de hl et hr
+Calculer P dans simulation
+Convention d'écriture des points dans les repères
+Vérifier que les données sont cohérentes avant de lancer la simulation
 G_0
+Modifier c_a car pas constant
 """
 
 from math import sin, cos, atan, sqrt
@@ -27,6 +31,12 @@ def rotation(p, c, angle):
     return [p[0], p[1]]
 
 
+# r1 to r2
+def translation(point, vect):
+    point[0] += vect[0]
+    point[1] += vect[1]
+
+# /!\ les points sont donnés dans le repère 1
 # constantes en SI ---------------------------------------------------------------->
 #  constantes physiques
 g = 9.81
@@ -46,7 +56,7 @@ m2 = 0  # masse mat + 1er bras
 m_charge = 0  # Masse le la charge portée
 m_bras_grap = 0  # Masse bras 2 et grappin
 m3 = m_charge + m_bras_grap  # masse grappin + 2 eme bras + charge
-m_tot = m1 + m2 + m3 # masse totale de la structure
+m_tot = m1 + m2 + m3  # masse totale de la structure
 # masses relatives
 m_c = m2  # masse charge totale
 m_s = m1  # masse de la stucture
@@ -60,6 +70,12 @@ hc = m_tot/(L**2*rho)
 G1_0 = []  # centre de gravité de la barge
 G2_0 = []  # centre de gravité du mas
 G3_0 = []  # centre de gravité du bras 2, de la charge utile et du grappin
+
+# Vecteur de translation pour passer du repère 1 au repère 2
+# Les points sont calculés pour correspondre au repère 2 apd ici ---------------------------->
+v1_2 = [d1*m2/m_s, 0]
+v2_1 = [-d1*m2/m_s, 0]
+
 # Centres relatifs
 G_0 = [0, (m1*(-hc+h1/2)+m2*(h1-hc+h2/2))/(m1+m2)]  # centre de gravité /!\ Change enfontction de ce qu'on veut simuler
 G_c_0 = []  # centre de gravité de la charge (ce qui va appliquer un couple sans être calculé dans le cnetre de gravité globale)
@@ -90,7 +106,11 @@ f_p = rho*g*L**2*hc  # force pousée
 f_G = m_s*g  # gravité appliquée sur centre de gravité
 f_charge = m_c*g  # gravité appliquée sur G3
 
-c_r = np.empty_like(t)  # couple redressement gravité poussé charge
+c_r = np.empty_like(t)  # couple redressement gravité poussée
+
+c_a = np.empty_like(t)  # Couple appliqué par la charge
+
+c_d = np.empty_like(t)  # Couple d'amortidssenment(v_angl)
 
 # centre de gravité
 G = np.empty_like(t)
@@ -109,7 +129,7 @@ for i in range(len(G_c)):
     G_c[i] = [0,0]  # Remplir la liste de [0,0] : coordonées nulles
 
 
-c_a = m_c*g*G_c[0][0]  # couple destabilisteur (constant)
+c_a = m_c*g*G_c[0][0]  # couple destabilisteur Il n'est pas constant attention
 
 
 # simulation ---------------------------------------------------------------->
