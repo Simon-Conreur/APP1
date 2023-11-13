@@ -8,9 +8,10 @@ Convention d'écriture des points dans les repères
 Vérifier que les données sont cohérentes avant de lancer la simulation
 G_0
 Modifier c_a car pas constant
+Fonction Inertie
 """
 
-from math import sin, cos, atan, sqrt
+from math import sin, cos, atan, sqrt, tan
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -20,6 +21,7 @@ def rotation(p, c, angle):
     """
     :param p: Point qui tourne (y,z)
     :param c: Centre de rotation (y, z)
+    :param angle: Angle de rotation (radiants)
     :return: rotation(p)
     """
     np.array(p)
@@ -35,6 +37,26 @@ def rotation(p, c, angle):
 def translation(point, vect):
     point[0] += vect[0]
     point[1] += vect[1]
+
+
+def g_trapeze(theta, l, hc, v):
+    """
+    nb: C est le centre de poussée voir notes pour plus d'infos
+    :param theta: Angle de rotation
+    :param l: largeur de la barge
+    :param hc: hauteur de l'eau au niveau du centre de gravité (hc)
+    :param v: composante y du vecteur R1->R2
+    :return: le centre de poussée P
+    """
+    hl = hc + tan(theta)*(l + (-v))
+    hr = hc - tan(theta)*(l - (-v))
+    lc_x = l*(hl + 2*hr)/(3*(hl + hr))
+    lc_y = (hl**2 + hl*hr + hr**2)/(3*(hl + hr))
+    Yc = -l/2 + lc_x + v
+    Zc = -hc + lc_y
+    C = rotation([Yc, Zc], [0,0], theta)
+    return C
+
 
 # /!\ les points sont donnés dans le repère 1
 # constantes en SI ---------------------------------------------------------------->
@@ -141,7 +163,7 @@ def simulation():
     P[0] = P_0
     for i in range(len(t)-1):
         G[i] = rotation(G_0, [0, 0], angl[i])
-        #il faut encore calculer P
+        P[i] = g_trapeze(angl[i], L, hc, v1_2[0])  # a vérifier car la manip est complquée
         c_r[i] = f_p*(P[i][0]-G[i][0])
         # F = Ia
         #  a_angl[i+1] = (c_a[i]+c_r[i])/I
