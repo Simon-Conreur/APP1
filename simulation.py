@@ -2,12 +2,7 @@
 Groupe 11.14 LEPL 1501-APP1
 Programme de simulation de la barge flottante
 TODO :
-Calculer les valeurs de hl et hr
-Calculer P dans simulation
-Convention d'écriture des points dans les repères
 Vérifier que les données sont cohérentes avant de lancer la simulation
-G_0
-Modifier c_a car pas constant
 Fonction Inertie
 """
 
@@ -35,8 +30,25 @@ def rotation(p, c, angle):
 
 # r1 to r2
 def translation(point, vect):
+    """
+    Déplace un point
+    :param point: point à déplacer
+    :param vect: vecteur de déplacement
+    :return: le nouveau point 
+    """
     point[0] += vect[0]
     point[1] += vect[1]
+
+
+def r1_2_0(point):
+    """
+    Repère 1 vers repère 2 à l'angle initial
+    :param point: point à modifier
+    :return: Le point dans r2
+    """
+    point[0], point[1] = point[0] + v1_2[0], point[1] + v1_2[1]  # translation vers R1
+    rotation(point, [0,0], angl_0)
+    return point
 
 
 def g_trapeze(theta, l, hc, v):
@@ -150,23 +162,30 @@ G_c = np.empty_like(t)
 for i in range(len(G_c)):
     G_c[i] = [0,0]  # Remplir la liste de [0,0] : coordonées nulles
 
-
-c_a = m_c*g*G_c[0][0]  # couple destabilisteur Il n'est pas constant attention
+# Déplacement des points initiaux vers le repère
+G_0 = r1_2_0(G_0)
+G_c_0 = r1_2_0(G_c_0)
 
 
 # simulation ---------------------------------------------------------------->
 def simulation():
+    # G_c[0] = G_c_0 inutile car G_c[0] est défini dans la premiere itération de la boucle
     angl[0] = angl_0
     v_angl[0] = v_angl_0
     a_angl[0] = 0
     dt = step
     P[0] = P_0
     for i in range(len(t)-1):
-        G[i] = rotation(G_0, [0, 0], angl[i])
+        # Points au temps i
+        G[i] = rotation(G_0, [0, 0], angl[i])  # centre de gravité
+        G_c[i] = rotation(G_c_0, [0, 0], angl[i])  # centre de gravité de la charge
         P[i] = g_trapeze(angl[i], L, hc, v1_2[0])  # a vérifier car la manip est complquée
+
+        # Couple au temps i
+        c_a[i] = m_c * g * G_c[i][0]  # couple destabilisteur en fonction de G_c_Y
         c_r[i] = f_p*(P[i][0]-G[i][0])
-        # F = Ia
-        #  a_angl[i+1] = (c_a[i]+c_r[i])/I
+
+        # vitesse et accélération au temps i+1  avec la méthode d'Euler depuis F = Ia
         v_angl[i+1] = v_angl[i]*(1-D*dt/I) + (c_r[i] - c_a)*dt/I
         angl[i+1] = angl[i]+v_angl[i+1]*dt
 
