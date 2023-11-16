@@ -4,6 +4,7 @@ Programme de simulation de la barge flottante
 TODO :
 Calculer mouvement charge
 Calculer Submersion Decollement
+Calculer les énergies
 """
 
 from math import sin, cos, atan, sqrt, tan, pi
@@ -32,23 +33,11 @@ def rotation(p, c, angle):
     return [p[0], p[1]]
 
 
-# r1 to r2
-def translation(point, vect):
-    """
-    Déplace un point
-    :param point: point à déplacer
-    :param vect: vecteur de déplacement
-    :return: les coordonnées de point après translation de vecteur vect
-    """
-    point[0] += vect[0]
-    point[1] += vect[1]
-
-
 def r1_2_0(point):
     """
-    Repère 1 vers repère 2 à l'angle initial
-    :param point: point à modifier
-    :return: Le point dans r2
+    Repère 1 vers repère 2 à l'angle initial plus de détails sur mes notes
+    :param point: point à déplacer dans R1
+    :return: Le point dans R2 (Translation de vecteur (X_G, 0) PUIS rotation de centre (0,0) et d'angle angl_0)
     """
     point[0], point[1] = point[0] + v1_2[0], point[1] + v1_2[1]  # translation vers R1
     rotation(point, [0,0], angl_0)  # rotation selon l'angle initial
@@ -57,12 +46,13 @@ def r1_2_0(point):
 
 def g_trapeze(theta, l, hc, v):
     """
-    nb: C est le centre de poussée voir notes pour plus d'infos
+    nb: C est le centre de poussée
+    Calculs détaillés dans les slides du CM de projet S8
     :param theta: Angle de rotation
     :param l: largeur de la barge
     :param hc: hauteur de l'eau au niveau du centre de gravité (hc)
     :param v: composante y du vecteur R1->R2 (= v1_2)
-    :return: le centre de poussée P
+    :return: le centre de poussée P du trapèze de bases hl, hr et de hauteur l
     """
     hl = hc + tan(theta)*(l/2 + (-v))
     hr = hc - tan(theta)*(l/2 - (-v))
@@ -74,12 +64,11 @@ def g_trapeze(theta, l, hc, v):
     return C
 
 
-# /!\ les points sont donnés dans le repère 1
 # constantes en SI ---------------------------------------------------------------->
 #  constantes physiques
 g = 9.81  # accélération due à la gravité de la Terre
 rho = 1000  # masse volumique de l'eau
-D = 5  # constante d'ammortissemnt
+D = 2  # constante d'ammortissemnt
 
 # constantes dimensions
 L = 0.60  # Largeur de la barge
@@ -90,52 +79,56 @@ d1 = 0.25  # distance centre de la barge/ centre du mat
 
 #  masses
 m1 = 0.700  # masse barge
-m2 = 0.5  # masse mat + 1er bras
+m2 = 0.2  # masse mat + 1er bras
 m_charge = 0.100  # Masse le la charge portée
 m_bras_grap = 0.200  # Masse bras 2 et grappin
 m3 = m_charge + m_bras_grap  # masse grappin + 2 eme bras + charge
+
 # masses relatives
+# (ces données sont à privilégier lors des calculs
+# car si on change la configuration de la grue il suffit de changer les variables ici)
 m_tot = m1 + m2 + m3  # masse totale de la structure
-m_c = 0  # masse charge totale
+m_c = 0.3  # masse charge totale
 m_s = m1 + m2  # masse de la stucture
 
 # constantes calculées ---------------------------------------------------------------->
 
-# hauteur flottaison moyenne
+# hauteur flottaison moyenne au niveau du centre de gravité G
 hc = m_tot/(L**2*rho)
-
-# centres de gravité en Y initiaux
-G1_0 = [0, -hc+h1/2]  # centre de gravité de la barge
-G2_0 = [d1, -hc + h1 + h2/2]  # centre de gravité du mas
-G3_0 = []  # centre de gravité du bras 2, de la charge utile et du grappin
-
-# Vecteur de translation pour passer du repère 1 au repère 2
-# Les points sont calculés pour correspondre au repère 2 apd ici ---------------------------->
-v1_2 = [-d1*m2/m_s, 0] # vecteur 1 vers 2
-v2_1 = [d1*m2/m_s, 0]  # vecteur 2 vers 1
 
 # Inertie de la structure
 I = (m1/12)*(h1**2 + L**2 + (hc - h1/2)**2) + m2*(h2**2 + L2**2 + d1**2 + (hc - h1 - h2/2)**2)
 
+# Constantes valeurs initiales
 
-# valeur initiales des variables principales
+# centres de gravité initiaux
+G1_0 = [0, -hc+h1/2]  # centre de gravité de la barge
+G2_0 = [d1, -hc + h1 + h2/2]  # centre de gravité du mas
+G3_0 = [0.70, 0.50]  # centre de gravité du bras 2, de la charge utile et du grappin
+
+# Variables cinématiques initiales
 angl_0 = 0  # angle initial
-v_angl_0 = 0  # vitesse angulaire initilale
-hl_0 = hc  # hauteur d'eau à gauche ! dépend de l'angle et de la position de G par rapport aux bords de la barge/!\ à modifier
-hr_0 = hc  # hauteur d'eau à droite
+v_angl_0 = 0  # vitesse angulaire initiale
 
-# Centres relatifs
-G_0 = [d1*m2/m_s, (m1*(-hc+h1/2)+m2*(h1-hc+h2/2))/(m1+m2)]  # centre de gravité /!\ Change enfontction de ce qu'on veut simuler
-G_c_0 = [0.70, 0.50]  # centre de gravité de la charge (ce qui va appliquer un couple sans être calculé dans le cnetre de gravité globale)
-P_0 = [0, hc/2]  # change en fonction de simulation
+# Centres relatifs initiaux
+G_0 = [(G1_0[0]*m1 + G2_0[0]*m2)/m_s, (G1_0[1]*m1 + (G2_0[1])*m2)/m_s]  # centre de gravité de la structure initiale
+G_c_0 = G3_0  # centre de gravité de la charge (ce qui applique c_a mais pas calculé dans le centre de gravité global)
+"""P_0 = [0, hc/2]  # change en fonction de simulation cette ligne est inutile"""
 
-# constantes simulation
+# constantes simulation --------------------------------------------------->
 step = 0.01  # pas de calcul
 end = 10  # temps de calcul
 
-# Variables ---------------------------------------------------------------->
+# forces (pour calculer les énergies)
+f_p = rho*g*L**2*hc  # force pousée
+f_G = m_s*g  # gravité appliquée sur centre de gravité
+f_charge = m_c*g  # gravité appliquée sur G3
 
-#  variables de simulations
+# Variables de simulation ---------------------------------------------------------------->
+
+# Variables une composante
+
+# Cinématique
 t = np.arange(0, end, step)  # temps
 angl = np.empty_like(t)  # angle d'inclinaison en fonction du temps
 v_angl = np.empty_like(t)  # Vitesse angulaire
@@ -143,57 +136,51 @@ a_angl = np.empty_like(t)  # Acceleration angulaire
 hl = np.empty_like(t)  # hauteur d'eau sur la gauche
 hr = np.empty_like(t)  # hauteur d'eau sur la droite
 
-# constantes de simulation
-f_p = rho*g*L**2*hc  # force pousée
-f_G = m_s*g  # gravité appliquée sur centre de gravité
-f_charge = m_c*g  # gravité appliquée sur G3
-
+# couples
 c_r = np.empty_like(t)  # couple redressement gravité poussée
-
 c_a = np.empty_like(t)  # Couple appliqué par la charge
-
 c_d = np.empty_like(t)  # Couple d'amortidssenment(v_angl)
 
-# centre de gravité
-tab = []
-for i in range(len(t)):
-    tab.append([0, 0])  # Remplir la liste de [0,0] : coordonées nulles
-G = np.zeros((len(t), 2))
-P = np.zeros_like(G)
-G_c = np.zeros_like(G)
-# centre de poussée rempli de coordonnées nulles
-# centre de gravité de la charge rempli de coordonnées nulles
+# centres de force
+G = np.zeros((len(t), 2))  # Remplir centre de gravité de coordonnées nulles
+P = np.zeros_like(G)  # Remplir centre de poussée de coordonnées nulles
+G_c = np.zeros_like(G)  # remplir centre de gravité de la charge de coordonnées nulles
 
 
-# Déplacement des points initiaux vers le repère
-G_0 = r1_2_0(G_0)
-G_c_0 = r1_2_0(G_c_0)
-P_0 = g_trapeze(angl_0, L, hc, v1_2[0])
-print(P_0, hc/2)
-print(G_0)
+# correspondance au repère 2 apd ici ---------------------------------------->
+
+# Vecteur de translation pour passer du repère 1 au repère 2 (voir shchéma notes)
+v1_2 = [-G_0[0], 0]  # vecteur 1 vers 2
+v2_1 = [G_0[0], 0]  # vecteur 2 vers 1
+
+# Déplacement des points initiaux vers le repère 2
+G_0 = r1_2_0(G_0)  # G_0 exprimé dans R1 -> G_0 exprimé dans R2
+G_c_0 = r1_2_0(G_c_0)  # G_c_0 exprimé dans R1 -> G_c_0 exprimé dans R2
+"""P_0 = g_trapeze(angl_0, L, hc, v1_2[0])"""
 
 
 # simulation ---------------------------------------------------------------->
 def simulation():
-    # G_c[0] = G_c_0 inutile car G_c[0] est défini dans la premiere itération de la boucle
+    dt = step
+    # initialisation des variables cinématiques
     angl[0] = angl_0
     v_angl[0] = v_angl_0
-    a_angl[0] = 0
-    dt = step
-    P[0] = P_0
+    # Boucle de simulation (in range(0, end, step))
     for i in range(len(t)-1):
         # Points au temps i
         G[i] = rotation(G_0, [0, 0], angl[i])  # centre de gravité
         G_c[i] = rotation(G_c_0, [0, 0], angl[i])  # centre de gravité de la charge
         P[i] = g_trapeze(angl[i], L, hc, v1_2[0])  # a vérifier car la manip est complquée
 
-        # Couple au temps i
+        # Couples au temps i
         c_a[i] = m_c * g * G_c[i][0]  # couple destabilisteur en fonction de G_c_Y
         c_r[i] = f_p*(P[i][0]-G[i][0])
 
-        # vitesse et accélération au temps i+1  avec la méthode d'Euler depuis F = Ia
+        # vitesse au temps i+1 avec la méthode d'Euler depuis F = Ia
         v_angl[i+1] = v_angl[i] + (-D*v_angl[i] + c_r[i] + c_a[i])*dt/I
+        # vItesse au temps i+1 en fonction de la vitesse au temps i+1
         angl[i+1] = angl[i]+v_angl[i]*dt
+
 
 # Representation graphique
 def graphiques():
