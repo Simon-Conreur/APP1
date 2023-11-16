@@ -2,8 +2,8 @@
 Groupe 11.14 LEPL 1501-APP1
 Programme de simulation de la barge flottante
 TODO :
-Vérifier que les données sont cohérentes avant de lancer la simulation
-Fonction Inertie
+Calculer mouvement charge
+Calculer Submersion Decollement
 """
 
 from math import sin, cos, atan, sqrt, tan, pi
@@ -71,7 +71,6 @@ def g_trapeze(theta, l, hc, v):
     Yc = -l/2 + lc_x + v
     Zc = -hc + lc_y
     C = rotation([Yc, Zc], [0,0], theta)
-    print("hl = ", C[0])
     return C
 
 
@@ -80,25 +79,25 @@ def g_trapeze(theta, l, hc, v):
 #  constantes physiques
 g = 9.81  # accélération due à la gravité de la Terre
 rho = 1000  # masse volumique de l'eau
-D = 1  # constante d'ammortissemnt
+D = 5  # constante d'ammortissemnt
 
 # constantes dimensions
 L = 0.60  # Largeur de la barge
 L2 = 0.05  # largeur du mat
 h1 = 0.10  # hauteur de la barge
 h2 = 0.50  # hauteur du mat
-d1 = 0.10  # distance centre de la barge/ centre du mat
+d1 = 0.25  # distance centre de la barge/ centre du mat
 
 #  masses
 m1 = 0.700  # masse barge
-m2 = 0.250  # masse mat + 1er bras
+m2 = 0.5  # masse mat + 1er bras
 m_charge = 0.100  # Masse le la charge portée
 m_bras_grap = 0.200  # Masse bras 2 et grappin
 m3 = m_charge + m_bras_grap  # masse grappin + 2 eme bras + charge
 # masses relatives
 m_tot = m1 + m2 + m3  # masse totale de la structure
-m_c = m2  # masse charge totale
-m_s = m1  # masse de la stucture
+m_c = 0  # masse charge totale
+m_s = m1 + m2  # masse de la stucture
 
 # constantes calculées ---------------------------------------------------------------->
 
@@ -118,16 +117,17 @@ v2_1 = [d1*m2/m_s, 0]  # vecteur 2 vers 1
 # Inertie de la structure
 I = (m1/12)*(h1**2 + L**2 + (hc - h1/2)**2) + m2*(h2**2 + L2**2 + d1**2 + (hc - h1 - h2/2)**2)
 
-# Centres relatifs
-G_0 = [0, (m1*(-hc+h1/2)+m2*(h1-hc+h2/2))/(m1+m2)]  # centre de gravité /!\ Change enfontction de ce qu'on veut simuler
-G_c_0 = [0.70, 0.50]  # centre de gravité de la charge (ce qui va appliquer un couple sans être calculé dans le cnetre de gravité globale)
-P_0 = [G_0[0], -hc/2]  # change en fonction de simulation
 
 # valeur initiales des variables principales
 angl_0 = 0  # angle initial
 v_angl_0 = 0  # vitesse angulaire initilale
 hl_0 = hc  # hauteur d'eau à gauche ! dépend de l'angle et de la position de G par rapport aux bords de la barge/!\ à modifier
 hr_0 = hc  # hauteur d'eau à droite
+
+# Centres relatifs
+G_0 = [d1*m2/m_s, (m1*(-hc+h1/2)+m2*(h1-hc+h2/2))/(m1+m2)]  # centre de gravité /!\ Change enfontction de ce qu'on veut simuler
+G_c_0 = [0.70, 0.50]  # centre de gravité de la charge (ce qui va appliquer un couple sans être calculé dans le cnetre de gravité globale)
+P_0 = [0, hc/2]  # change en fonction de simulation
 
 # constantes simulation
 step = 0.01  # pas de calcul
@@ -168,6 +168,9 @@ G_c = np.zeros_like(G)
 # Déplacement des points initiaux vers le repère
 G_0 = r1_2_0(G_0)
 G_c_0 = r1_2_0(G_c_0)
+P_0 = g_trapeze(angl_0, L, hc, v1_2[0])
+print(P_0, hc/2)
+print(G_0)
 
 
 # simulation ---------------------------------------------------------------->
@@ -184,7 +187,6 @@ def simulation():
         G_c[i] = rotation(G_c_0, [0, 0], angl[i])  # centre de gravité de la charge
         P[i] = g_trapeze(angl[i], L, hc, v1_2[0])  # a vérifier car la manip est complquée
 
-
         # Couple au temps i
         c_a[i] = m_c * g * G_c[i][0]  # couple destabilisteur en fonction de G_c_Y
         c_r[i] = f_p*(P[i][0]-G[i][0])
@@ -192,7 +194,6 @@ def simulation():
         # vitesse et accélération au temps i+1  avec la méthode d'Euler depuis F = Ia
         v_angl[i+1] = v_angl[i] + (-D*v_angl[i] + c_r[i] + c_a[i])*dt/I
         angl[i+1] = angl[i]+v_angl[i]*dt
-
 
 # Representation graphique
 def graphiques():
@@ -204,10 +205,10 @@ def graphiques():
     plt.plot(t, v_angl*180/pi, label="omega")
     plt.legend()
     plt.subplot(4, 1, 3)
-    plt.plot(t,c_r, label="c_r")
+    plt.plot(t, G, label="c_r")
     plt.legend()
     plt.subplot(4, 1, 4)
-    plt.plot(t, c_a, label="c_a")
+    plt.plot(t, P, label="c_a")
     plt.legend()
     plt.show()
 
