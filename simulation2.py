@@ -1,6 +1,6 @@
 """
 Groupe 11.14 LEPL 1501-APP1
-Programme de simulation de la barge flottante
+Programme de simulation de la barge flottante simplifiée
 
 """
 
