@@ -58,13 +58,12 @@ D = 1  # constante d'ammortissemnt
 
 # constantes dimensions
 L = 0.60  # Largeur de la barge
-L2 = 0.05  # largeur du mat
 h1 = 0.10  # hauteur de la barge
 
 #  masses
 m1 = 3  # masse barge
-m_charge = 3  # Masse le la charge portée
-m_bras_grap = 0.1  # Masse bras 2 et grappin
+m_charge = 0.2  # Masse le la charge portée
+m_bras_grap = 0   # Masse bras 2 et grappin
 m3 = m_charge + m_bras_grap  # masse grappin + 2 eme bras + charge
 
 # masses relatives
@@ -81,11 +80,12 @@ hc = m_tot/(rho*L**2)
 
 # Inertie de la structure
 I = (m1/12)*(h1**2 + L**2) + m1*(hc - h1/2)**2
+I = 1.18
 # Constantes valeurs initiales
 
 # centres de gravité initiaux
 G1_0 = [0, -hc+h1/2]  # centre de gravité de la barge
-G3_0 = [-1, 0.50]  # centre de gravité du bras 2, de la charge utile et du grappin
+G3_0 = [-0.80, 0.50]  # centre de gravité du bras 2, de la charge utile et du grappin
 
 # Variables cinématiques initiales
 angl_0 = 0*pi/180   # angle initial
@@ -121,6 +121,16 @@ c_r = np.empty_like(t)  # couple redressement gravité poussée
 c_a = np.empty_like(t)  # Couple appliqué par la charge
 c_d = np.empty_like(t)  # Couple d'amortidssenment(v_angl)
 
+
+# Energies
+Ek = np.empty_like(t)  # Energie cinétique
+E_a = np.empty_like(t)  # Energie potentielle de la charge
+E_P = np.empty_like(t)  # Energie potentielle due à la poussée d'archimède
+E_G = np.empty_like(t)  # Energie potentielle due à la gravité
+
+Em = np.empty_like(t)  # Energie mecanique
+E_perdue = np.empty_like(t)  # Energie perdue lors du frottement
+
 # centres de force
 G = np.zeros((len(t), 2))  # Remplir centre de gravité de coordonnées nulles
 P = np.zeros_like(G)  # Remplir centre de poussée de coordonnées nulles
@@ -149,6 +159,15 @@ def simulation():
         # vItesse au temps i+1 en fonction de la vitesse au temps i+1
         angl[i+1] = angl[i]+v_angl[i]*dt
 
+        # Energies au temps i
+        Ek[i] = I * m_tot * v_angl[i] ** 2 / 2
+        E_a[i] = -c_a[i]*angl[i]
+        E_G[i] = -m_tot*g*(G[i][1] - G[0][1])
+        E_P[i] = -m_tot*g*(P[i][1] - P[0][1])
+        Em[i] = Ek[i] + E_a[i] + E_G[i] + E_P[i]
+
+        E_perdue[i] = Em[0] - Em[i]
+
 
 # Representation graphique
 def graphiques():
@@ -160,7 +179,7 @@ def graphiques():
     plt.plot(t, v_angl*180/pi, label="omega")
     plt.legend()
     plt.subplot(5, 1, 3)
-    plt.plot(t, G, label="c_r")
+    plt.plot(t, P, label="c_r")
     plt.legend()
     plt.subplot(5, 1, 4)
     plt.plot(t, c_r, label="c_a")
@@ -170,8 +189,25 @@ def graphiques():
     plt.legend()
     plt.show()
 
+
+def graphiques_energie():
+    plt.figure(2)
+    plt.subplot(1, 1, 1)
+    plt.plot(t, Ek, label="Energie Cinétique")
+    plt.legend()
+    plt.plot(t, E_G, label="Energie potentielle de gravité")
+    plt.legend()
+    plt.plot(t, E_P, label="Energie potentielle de poussée")
+    plt.legend()
+    plt.plot(t, E_a, label="Energie potentielle de charge")
+    plt.legend()
+    #plt.plot(t, Em, label="Energie mécanique")
+    #plt.legend()
+    plt.show()
+
 simulation()
 graphiques()
+graphiques_energie()
 
 
 
