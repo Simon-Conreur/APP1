@@ -1,7 +1,10 @@
 """
 Groupe 11.14 LEPL 1501-APP1
 Programme de simulation de la barge flottante simplifiée
-
+TODO
+Recalculer l'inertie
+Rendre le déplacement de g_c plus intuitif
+Diagramme de phase
 """
 
 from math import sin, cos, atan, sqrt, tan, pi
@@ -19,20 +22,21 @@ def rotation(p, c, angle):
     """
     p = np.array(p)
     c = np.array(c)
-    p -= c
-    y_p = p[0]
-    z_p = p[1]
+    p -= c      # les points tournent autour de (0;0) donc on peut négliger cette ligne
+    y_p = p[0]  # y_p = composante y du point qui tourne
+    z_p = p[1]  # z_p = composante z du point qui tourne
     # matrice de rotation
-    p[0] = cos(angle)*y_p - sin(angle)*z_p
-    p[1] = sin(angle)*y_p + cos(angle)*z_p
+    p[0] = cos(angle)*y_p - sin(angle)*z_p  # matrice de rotation ( y*cos(angle) - z*sin(angle) )
+    p[1] = sin(angle)*y_p + cos(angle)*z_p  # ------------------- ( y*sin(angle) + z*cos(angle) )
 
     p += c
-    return [p[0], p[1]]
+    return [p[0], p[1]]  # retourne le centre de rotation
 
 
 def g_trapeze(theta, l, hc):
     """
-    nb: C est le centre de poussée
+    Calcul du centre de gravité d'un trapèze de bases hl et hr, le plus grand côté non parallèle vaut l.
+    Theta est l'inclinaison qui engendre le trapèze
     Calculs détaillés dans les slides du CM de projet S8
     :param theta: Angle de rotation
     :param l: largeur de la barge
@@ -47,7 +51,7 @@ def g_trapeze(theta, l, hc):
     Yc = -l/2 + lc_x
     Zc = -hc + lc_y
     C = rotation([Yc, Zc], [0, 0], -theta)
-    return C
+    return C  # le centre de poussée
 
 
 # constantes en SI ---------------------------------------------------------------->
@@ -85,7 +89,7 @@ I = 1.18
 
 # centres de gravité initiaux
 G1_0 = np.array([0, -hc+h1/2])  # centre de gravité de la barge
-G3_0 = np.array([0, 0.50])   # centre de gravité du bras 2, de la charge utile et du grappin
+G3_0 = np.array([0, 0.50])      # centre de gravité du bras 2, de la charge utile et du grappin
 
 # Variables cinématiques initiales
 angl_0 = 0*pi/180  # angle initial
@@ -150,26 +154,28 @@ def G_c_deplacement(t, drop=False):
 
 # simulation ---------------------------------------------------------------->
 def simulation():
-    dt = step
+    dt = step  # delta t = le pas
 
     # initialisation des variables cinématiques
-    angl[0] = angl_0
-    v_angl[0] = v_angl_0
+    angl[0] = angl_0      # angle initial
+    v_angl[0] = v_angl_0  # vitesse angulaire initiale
 
     # Boucle de simulation (in range(0, end, step))
     for i in range(len(t)-1):
         # Points au temps i
-        G[i] = rotation(G_0, [0, 0], angl[i])  # centre de gravité
+        G[i] = rotation(G_0, [0, 0], angl[i])                           # centre de gravité de la barge
         G_c[i] = rotation(G_c_0 + G_c_deplacement(i), [0, 0], angl[i])  # centre de gravité de la charge
-        P[i] = g_trapeze(angl[i], L, hc)  # a vérifier car la manip est complquée
+        P[i] = g_trapeze(angl[i], L, hc)                                   # Centre de poussée = centre de masse d'un trapèze
+
 
         # Couples au temps i
-        c_a[i] = f_charge * G_c[i][0]  # couple destabilisteur en fonction de G_c_Y
-        c_r[i] = f_p*(P[i][0]-G[i][0])
+        c_a[i] = f_charge * G_c[i][0]   # couple destabilisteur appliqué par la charge
+        c_r[i] = f_p*(P[i][0]-G[i][0])  # couple de redressement appliqué par la gravité et la poussée d'archimède
 
-        # Vitesse au temps i+1 avec la méthode d'Euler depuis F = Ia
+        # Vitesse au temps i+1 : Methode d'Euler qui provient de F = Ia
         v_angl[i+1] = v_angl[i] + (-D*v_angl[i] + c_r[i] + c_a[i])*dt/I
-        # Angle au temps i+1 en fonction de la vitesse au temps i+1
+
+        # Angle au temps i+1 en fonction de la vitesse au temps i+1 : Methode d'Euler
         angl[i+1] = angl[i]+v_angl[i]*dt
 
         # Energies au temps i
@@ -183,25 +189,26 @@ def simulation():
 # Representation graphique
 def graphiques():
     # Angle en fonction du temps
-    angl_max = atan((h1 - hc)*2/L)*180/pi
-    angl_min = atan(-hc*2/L)*180/pi
-    plt.figure(1)
-    plt.subplot(5, 1, 1)
+    angl_submersion = atan((h1 - hc)*2/L)*180/pi  # angle maximal avant submersion
+    angl_soulevement = atan(-hc*2/L)*180/pi       # angle maximal avant soulevement
+
+    plt.figure(1)               # Fenetre 1
+    plt.subplot(5, 1, 1)  # Premier graphique
     plt.plot(t, angl*180/pi, label="theta")
-    plt.plot([0, end], [angl_max, angl_max], '--r', label="Submersion")
-    plt.plot([0, end], [-angl_max, -angl_max], '--r')
-    plt.plot([0, end], [angl_min, angl_min] , '--g', label="Soulèvement")
-    plt.plot([0, end], [-angl_min, -angl_min] , '--g')
-    plt.xlabel("[ s ]")
-    plt.ylabel("[ ° ]")
-    plt.legend()
+    plt.plot([0, end], [angl_submersion, angl_submersion], '--r', label="Submersion")     # Submersion : borne +
+    plt.plot([0, end], [-angl_submersion, -angl_submersion], '--r')                       # Submersion : borne -
+    plt.plot([0, end], [angl_soulevement, angl_soulevement], '--g', label="Soulèvement")  # Soulevement : borne +
+    plt.plot([0, end], [-angl_soulevement, -angl_soulevement], '--g')                     # Soulevement : borne -
+    plt.xlabel("[ s ]")  # légende unité axe x
+    plt.ylabel("[ ° ]")  # légende unité axe y
+    plt.legend()         # Graduation des axes
 
     # Vitesse angulaire en fonction du temps
-    plt.subplot(5, 1, 2)
-    plt.plot(t, v_angl*180/pi, label="omega")
-    plt.xlabel("[ s ]")
-    plt.ylabel("[ °/s ]")
-    plt.legend()
+    plt.subplot(5, 1, 2)                       # deuxième graphique
+    plt.plot(t, v_angl*180/pi, label="omega")  # Vitesse angulaire
+    plt.xlabel("[ s ]")                              # légende unité axe x
+    plt.ylabel("[ °/s ]")                            # légende unité axe y
+    plt.legend()                                     # Graduation des axes
     plt.subplot(5, 1, 3)
     plt.plot(t, P, label="c_r")
     plt.legend()
@@ -219,26 +226,24 @@ def graphiques():
 
 
 def graphiques_energie():
-    plt.figure(2)
-    plt.subplot(1, 1, 1)
-    plt.plot(t, Ek, label="Energie Cinétique")
-    plt.ylabel("[ J ]")
-    plt.xlabel("[ s ]")
-    plt.legend()
-    plt.plot(t, E_G, label="Energie potentielle de gravité")
-    plt.legend()
-    plt.plot(t, E_P, label="Energie potentielle de poussée")
-    plt.legend()
-    plt.plot(t, E_a, label="Energie potentielle de charge")
-    plt.legend()
-    plt.plot(t, Em, label="Energie mécanique")
-    plt.legend()
-    plt.show()
+    plt.figure(2)  # Deuxieme fenetre
+    plt.subplot(1, 1, 1)  # Premier graphique
+
+    plt.plot(t, Ek, label="Energie Cinétique")                # Energie cinétique
+    plt.plot(t, E_G, label="Energie potentielle de gravité")  # Energie potentille de gravité
+    plt.plot(t, E_P, label="Energie potentielle de poussée")  # Energie potentielle de poussée
+    plt.plot(t, E_a, label="Energie potentielle de charge")   # Energie potentielle de gravité de la charge
+    plt.plot(t, Em, label="Energie mécanique")                # Energie mécanique
+
+    plt.ylabel("[ J ]")  # légende unité axe y
+    plt.xlabel("[ s ]")  # légende unité axe x
+    plt.legend()         # Graduation des axes
+    plt.show()           # Affichage des graphiques
 
 
 simulation()
-graphiques()
-graphiques_energie()
+graphiques()          # Affichage des graphiques cinématiques
+graphiques_energie()  # Affichages des graphiques énergétiques
 
 
 
