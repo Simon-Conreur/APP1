@@ -240,15 +240,18 @@ def graphiques_energie():
     plt.legend()         # Graduation des axes
     plt.show()           # Affichage des graphiques
 
-
+def diagramme_de_phase():
+    plt.figure(3)
+    plt.title("Diagramme de phase")
+    plt.plot(angl*180/pi, v_angl*180/pi)
+    plt.xlabel("theta (o)")
+    plt.ylabel("omega (o/s)")
+    plt.legend()
+    plt.show()
+    
+    
+    
 simulation()
 graphiques()          # Affichage des graphiques cinématiques
 graphiques_energie()  # Affichages des graphiques énergétiques
-
-
-
-
-
-
-
-
+diagramme_de_phase()  # Affichage du diagramme de phase
